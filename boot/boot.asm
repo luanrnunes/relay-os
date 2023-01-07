@@ -30,7 +30,7 @@ Loader:
     int 0x13
     jc ReadError ; Se nao conseguir ler setores, pula para o erro
     mov dl,[DriveId] ; Se o loader for alocado com sucesso na memoria, passa o valor de DriveId para o registrador dl
-
+    jmp 0x7e00 ; Pula para o endereco de memoria onde esta o loader carregado do disco
 ReadError:
 NotSupport:
     mov ah,0x13
@@ -41,7 +41,6 @@ NotSupport:
     mov cx,MessageLen 
     int 0x10
 
-NotSupport:
 End:
     hlt    
     jmp End
