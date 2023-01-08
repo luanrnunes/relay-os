@@ -48,20 +48,117 @@ MemStatsGet:
     jnz MemStatsGet; Jump para o inicio if zero flag is not set
 
 EndMem:
-    mov ah,0x13
-    mov al,1
-    mov bx,0xa
-    xor dx,dx
-    mov bp,Message
-    mov cx,MessageLen 
-    int 0x10
+ 
 
+A20:
+    mov ax,0xffff
+    mov es,ax
+    mov word[ds:0x7c00],0xa200 ; Instrucao vai copiar a200 na memoria em 7c00
+    cmp word[es:0x7c10],0xa200
+    jne A20End
+    mov word[0x7c00],0xb200
+    cmp word[es:0x7c10],0xb200 ; Compara os valores, se permanecer o mesmo, significa que a20 esta desbilitado
+    je End; Jump if Equal
+
+A20End:
+    xor ax,ax
+    mov es,ax
+
+Video:
+    mov ax,3 ; Seta o modo de video para texto
+    int 0x10
+    cli
+    lgdt [Gdt32Ptr]
+    lidt [Idt32Ptr]
+    mov eax,cr0
+    or eax,1 ; Altera o bit de 0 para 1
+    mov cr0,eax ; Passando o valor novamente para o cr0
+    jmp 8:Protected ; Nao e possivel utilizar mov para registrador cs. Aqui entra em Protected Mode
+    
 ReadError:
 NotSupport:
 End:
     hlt
     jmp End
+
+[BITS 32]
+Protected:          ; Este bloco basicamente encontra area de memoria livre e inicializa a estrutura de paginacao
+    mov ax,0x10
+    mov ds,ax
+    mov es,ax
+    mov ss,ax
+    mov esp,0x7c00
+    cld             
+    mov edi,0x80000
+    xor eax,eax
+    mov ecx,0x10000/4
+    rep stosd
+    mov dword [0x80000],0x81007
+    mov dword [0x81000],10000111b
+    mov eax,cr4 ; Mover o conteudo de cr4 para eax. Inicializando modo 64bits
+    or eax,(1<<5) ; Setando bit 5
+    mov cr4,eax ; E devolvendo o bit modificado para o cr4
+    mov eax,0x80000
+    mov cr3,eax ; O endereco carregado para cr3 e fisico
+    mov ecx,0xc0000080
+    rdmsr ; Read MSR
+    or eax, (1<<8)  ; O valor do retorno esta no registrador eax, entao defini 8 bits
+    wrmsr      ; Entao escrevo novamente no registro
+    mov eax,cr0
+    or eax,(1<<31)
+    mov cr0,eax
+    jmp 8:LongMode
+
+ProtectedHalt:
+    hlt
+    jmp ProtectedHalt
+
+
+[BITS 64]
+LongMode:
+    mov rsp,0x7c00
+    mov byte[0xb8000],'L'
+    mov byte[0xb8001],0xa
+
+LongModeHalt:
+    hlt
+    jmp LongModeHalt
+
 DriveId: db 0
-Message: db "KERNEL LOADED SUCCESSFULLY!"
-MessageLen: equ $-Message
 ReadPacket: times 16 db 0
+
+Gdt32:
+    dq 0 ; Alocados 8 bytes com dq para inicializar o gdt
+
+x86:
+    dw 0xffff ; Segmento definido ao valor maximo
+    dw 0
+    db 0 ; Segmento inicia do zero
+    db 0x9a
+    db 0xcf
+    db 0
+
+Datax86:
+    dw 0xffff ; Segmento definido ao valor maximo
+    dw 0
+    db 0 ; Segmento inicia do zero
+    db 0x92
+    db 0xcf
+    db 0
+
+Gdt32Len: equ $-Gdt32
+                                    ; Data Pointers
+Gdt32Ptr: dw Gdt32Len-1
+          dd Gdt32 ; Os proximos 4 bytes sao o endereco do gdt
+
+Idt32Ptr: dw 0
+          dd 0
+
+Gdt64:
+    dq 0 ; Inicializado Gdt64
+    dq 0x0020980000000000
+
+Gdt64Len: equ $-Gdt64
+
+Gdt64ptr: dw Gdt64Len-1; Os primeiros dois bytes define o tamanho do gdt
+          dw Gdt64 ; Proximos 4 bytes e o endereco do gdt
