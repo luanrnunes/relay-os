@@ -3,12 +3,10 @@
 
 start:
     mov [DriveId],dl
-
     mov eax,0x80000000
     cpuid
     cmp eax,0x80000001
     jb NotSupport
-
     mov eax,0x80000001
     cpuid
     test edx,(1<<29)
@@ -45,7 +43,6 @@ GetMemInfo:
     mov ecx,20
     int 0x15
     jc GetMemDone
-
     test ebx,ebx
     jnz GetMemInfo
 
@@ -67,16 +64,13 @@ SetA20LineDone:
 
 SetVideoMode:
     mov ax,3
-    int 0x10
-    
+    int 0x10   
     cli
     lgdt [Gdt32Ptr]
     lidt [Idt32Ptr]
-
     mov eax,cr0
     or eax,1
     mov cr0,eax
-
     jmp 8:PMEntry
 
 ReadError:
@@ -85,7 +79,6 @@ End:
     hlt
     jmp End
 
-
 [BITS 32]
 PMEntry:
     mov ax,0x10
@@ -93,34 +86,26 @@ PMEntry:
     mov es,ax
     mov ss,ax
     mov esp,0x7c00
-
     cld
     mov edi,0x70000
     xor eax,eax
     mov ecx,0x10000/4
-    rep stosd
-    
+    rep stosd   
     mov dword[0x70000],0x71007
     mov dword[0x71000],10000111b
-
     lgdt [Gdt64Ptr]
-
     mov eax,cr4
     or eax,(1<<5)
     mov cr4,eax
-
     mov eax,0x70000
     mov cr3,eax
-
     mov ecx,0xc0000080
     rdmsr
     or eax,(1<<8)
     wrmsr
-
     mov eax,cr0
     or eax,(1<<31)
     mov cr0,eax
-
     jmp 8:LMEntry
 
 PEnd:
@@ -130,21 +115,17 @@ PEnd:
 [BITS 64]
 LMEntry:
     mov rsp,0x7c00
-
     cld
     mov rdi,0x200000
     mov rsi,0x10000
     mov rcx,51200/8
     rep movsq
-
     jmp 0x200000
     
 LEnd:
     hlt
     jmp LEnd
-    
-    
-
+ 
 DriveId:    db 0
 ReadPacket: times 16 db 0
 
