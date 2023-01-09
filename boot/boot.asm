@@ -14,23 +14,25 @@ TestDiskExtension:
     mov bx,0x55aa
     int 0x13
     jc NotSupport
-    cmp bx,0xaa55 ; Se bx nao for igual a AA55 significa que nao suporta a extensao
+    cmp bx,0xaa55
     jne NotSupport
 
-Loader:
+LoadLoader:
     mov si,ReadPacket
-    mov word [si],0x10 ; first word holds the value of structure length. ReadPacket is 16 (bytes) so it is 10 in hexa
-    mov word [si+2],5 ; word 2 e o numero de setores reservados, 5 ja basta pois o loader e pequeno
-    mov word [si+4],0x7e00 ; Inicia a leitura de word no endereco 0x7e00
-    mov word [si+6],0 ; Segmento da execucao, nao ha mudancas, defino em 0
-    mov dword [si+8],1 ; 1(2 bits=0-1) reservados no registrador baixo de 64bits
-    mov dword [si+0xc], 0 ; Na alta 64 bits, e reservado apenas 1
+    mov word[si],0x10
+    mov word[si+2],5
+    mov word[si+4],0x7e00
+    mov word[si+6],0
+    mov dword[si+8],1
+    mov dword[si+0xc],0
     mov dl,[DriveId]
     mov ah,0x42
     int 0x13
-    jc ReadError ; Se nao conseguir ler setores, pula para o erro
-    mov dl,[DriveId] ; Se o loader for alocado com sucesso na memoria, passa o valor de DriveId para o registrador dl
-    jmp 0x7e00 ; Pula para o endereco de memoria onde esta o loader carregado do disco
+    jc  ReadError
+
+    mov dl,[DriveId]
+    jmp 0x7e00 
+
 ReadError:
 NotSupport:
     mov ah,0x13
@@ -44,10 +46,10 @@ NotSupport:
 End:
     hlt    
     jmp End
-     
-DriveId: db 0
-Message:    db "FATAL ERROR DURING BOOT PROCESS!"
-MessageLen: equ $-Message ; Lembrar que $ ajusta o tamanho da mensagem de acordo
+    
+DriveId:    db 0
+Message:    db "We have an error in boot process"
+MessageLen: equ $-Message
 ReadPacket: times 16 db 0
 
 times (0x1be-($-$$)) db 0
