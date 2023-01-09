@@ -8,7 +8,7 @@ start:
     mov ss,ax
     mov sp,0x7c00
 
-TestDiskExtension:
+Disk:
     mov [DriveId],dl
     mov ah,0x41
     mov bx,0x55aa
@@ -17,7 +17,7 @@ TestDiskExtension:
     cmp bx,0xaa55
     jne NotSupport
 
-LoadLoader:
+Loader:
     mov si,ReadPacket
     mov word[si],0x10
     mov word[si+2],5
@@ -43,7 +43,8 @@ NotSupport:
     int 0x10
 End:
     hlt    
-    jmp End    
+    jmp End
+    
 DriveId:    db 0
 Message:    db "We have an error in boot process"
 MessageLen: equ $-Message

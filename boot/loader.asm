@@ -13,7 +13,6 @@ start:
     jz NotSupport
     test edx,(1<<26)
     jz NotSupport
-
 LoadKernel:
     mov si,ReadPacket
     mov word[si],0x10
@@ -57,21 +56,20 @@ TestA20:
     cmp word[es:0x7c10],0xb200
     je End
     
-
 SetA20LineDone:
     xor ax,ax
     mov es,ax
 
 SetVideoMode:
     mov ax,3
-    int 0x10   
+    int 0x10  
     cli
     lgdt [Gdt32Ptr]
     lidt [Idt32Ptr]
     mov eax,cr0
     or eax,1
     mov cr0,eax
-    jmp 8:PMEntry
+    jmp 8:Protected
 
 ReadError:
 NotSupport:
@@ -80,7 +78,7 @@ End:
     jmp End
 
 [BITS 32]
-PMEntry:
+Protected:
     mov ax,0x10
     mov ds,ax
     mov es,ax
@@ -90,7 +88,7 @@ PMEntry:
     mov edi,0x70000
     xor eax,eax
     mov ecx,0x10000/4
-    rep stosd   
+    rep stosd
     mov dword[0x70000],0x71007
     mov dword[0x71000],10000111b
     lgdt [Gdt64Ptr]
@@ -106,26 +104,27 @@ PMEntry:
     mov eax,cr0
     or eax,(1<<31)
     mov cr0,eax
-    jmp 8:LMEntry
+    jmp 8:LongS
 
-PEnd:
+ProtectedHalt:
     hlt
-    jmp PEnd
+    jmp ProtectedHalt
 
 [BITS 64]
-LMEntry:
+LongS:
     mov rsp,0x7c00
     cld
     mov rdi,0x200000
     mov rsi,0x10000
     mov rcx,51200/8
     rep movsq
+
     jmp 0x200000
     
-LEnd:
+LongHalt:
     hlt
-    jmp LEnd
- 
+    jmp LongHalt
+    
 DriveId:    db 0
 ReadPacket: times 16 db 0
 
@@ -154,13 +153,11 @@ Gdt32Ptr: dw Gdt32Len-1
 Idt32Ptr: dw 0
           dd 0
 
-
 Gdt64:
     dq 0
     dq 0x0020980000000000
 
 Gdt64Len: equ $-Gdt64
-
 
 Gdt64Ptr: dw Gdt64Len-1
           dd Gdt64
